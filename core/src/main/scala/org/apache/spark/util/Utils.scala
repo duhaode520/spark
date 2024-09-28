@@ -2089,6 +2089,15 @@ private[spark] object Utils
       .orNull
   }
 
+  def getDefaultConfDir(env: Map[String, String] = sys.env): String = {
+    env.get("SPARK_CONF_DIR")
+      .orElse(env.get("SPARK_HOME").map { t => s"$t${File.separator}conf" })
+      .map(t => new File(t))
+      .filter(_.isDirectory)
+      .map(_.getAbsolutePath)
+      .orNull;
+  }
+
   /**
    * Return a nice string representation of the exception. It will call "printStackTrace" to
    * recursively generate the stack trace including the exception and its causes.

@@ -1056,6 +1056,18 @@ package object config {
       .stringConf
       .createWithDefaultString("AES/CTR/NoPadding")
 
+  private[spark] val FHE_ENABLED =
+      ConfigBuilder("spark.fhe.enabled")
+      .version("3.2.0")
+      .booleanConf
+      .createWithDefault(false)
+
+  private[spark] val FHE_PUBLIC_KEY_DIR =
+        ConfigBuilder("spark.fhe.publicKeyDir")
+        .version("3.2.0")
+        .stringConf
+        .createOptional
+
   private[spark] val DRIVER_HOST_ADDRESS = ConfigBuilder("spark.driver.host")
     .doc("Address of driver endpoints.")
     .version("0.7.0")

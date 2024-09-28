@@ -35,6 +35,7 @@ private[spark] object CoarseGrainedClusterMessages {
       sparkProperties: Seq[(String, String)],
       ioEncryptionKey: Option[Array[Byte]],
       hadoopDelegationCreds: Option[Array[Byte]],
+      fhePublicKeyPath: Option[String],
       resourceProfile: ResourceProfile)
     extends CoarseGrainedClusterMessage
 

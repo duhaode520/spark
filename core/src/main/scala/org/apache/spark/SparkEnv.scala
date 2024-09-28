@@ -27,6 +27,7 @@ import scala.collection.mutable
 import scala.util.Properties
 
 import com.google.common.cache.CacheBuilder
+import org.ade.SpatialFHE.FHEHelper
 import org.apache.hadoop.conf.Configuration
 
 import org.apache.spark.annotation.DeveloperApi
@@ -83,6 +84,26 @@ class SparkEnv (
   private[spark] var driverTmpDir: Option[String] = None
 
   private[spark] var executorBackend: Option[ExecutorBackend] = None
+
+  private[spark] var fheHelper: Option[FHEHelper] = None
+
+  private[spark] def initFHEHelper(executorId: String, publicKeyPath: String): Unit = {
+    val isDriver = executorId == SparkContext.DRIVER_IDENTIFIER
+
+    val privateKeyPath = if (isDriver) {
+      driverTmpDir.get + "/" + "private.key"
+    } else {
+      ""
+    }
+    val confDir = if (conf.get("spark.testing") == "true") {
+      val t = conf.get("spark.test.home")
+      s"$t${File.separator}conf"
+    } else {
+      Utils.getDefaultConfDir()
+    }
+    fheHelper = Some(FHEHelper.getOrCreate(
+        publicKeyPath, privateKeyPath, confDir, isDriver));
+  }
 
   private[spark] def stop(): Unit = {
 
@@ -181,7 +202,7 @@ object SparkEnv extends Logging {
     } else {
       None
     }
-    create(
+    val env = create(
       conf,
       SparkContext.DRIVER_IDENTIFIER,
       bindAddress,
@@ -193,6 +214,12 @@ object SparkEnv extends Logging {
       listenerBus = listenerBus,
       mockOutputCommitCoordinator = mockOutputCommitCoordinator
     )
+    if (conf.get(FHE_ENABLED)) {
+      val publicKeyPath = conf.get(FHE_PUBLIC_KEY_DIR) +"/" + "public.key"
+      env.initFHEHelper(SparkContext.DRIVER_IDENTIFIER, publicKeyPath)
+    }
+
+    env
   }
 
   /**
@@ -206,7 +233,8 @@ object SparkEnv extends Logging {
       hostname: String,
       numCores: Int,
       ioEncryptionKey: Option[Array[Byte]],
-      isLocal: Boolean): SparkEnv = {
+      isLocal: Boolean,
+      fhePublicKeyPath: Option[String]): SparkEnv = {
     val env = create(
       conf,
       executorId,
@@ -218,6 +246,10 @@ object SparkEnv extends Logging {
       ioEncryptionKey
     )
     SparkEnv.set(env)
+    if (fhePublicKeyPath.nonEmpty) {
+      env.initFHEHelper(executorId, fhePublicKeyPath.get)
+    }
+
     env
   }
 
@@ -227,9 +259,10 @@ object SparkEnv extends Logging {
       hostname: String,
       numCores: Int,
       ioEncryptionKey: Option[Array[Byte]],
-      isLocal: Boolean): SparkEnv = {
+      isLocal: Boolean,
+      fhePublicKeyPath: Option[String]): SparkEnv = {
     createExecutorEnv(conf, executorId, hostname,
-      hostname, numCores, ioEncryptionKey, isLocal)
+      hostname, numCores, ioEncryptionKey, isLocal, fhePublicKeyPath)
   }
 
   /**

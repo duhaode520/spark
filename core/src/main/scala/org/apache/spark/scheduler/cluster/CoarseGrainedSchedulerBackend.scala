@@ -345,6 +345,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
           sparkProperties,
           SparkEnv.get.securityManager.getIOEncryptionKey(),
           Option(delegationTokens.get()),
+          Option(SparkEnv.get.fheHelper.get.getPublicKeyPath),
           rp)
         context.reply(reply)
 
