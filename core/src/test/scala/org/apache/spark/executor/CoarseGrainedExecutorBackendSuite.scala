@@ -37,7 +37,7 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.apache.spark._
 import org.apache.spark.TestUtils._
 import org.apache.spark.api.plugin.{DriverPlugin, ExecutorPlugin, PluginContext, SparkPlugin}
-import org.apache.spark.internal.config.PLUGINS
+import org.apache.spark.internal.config.{FHE_ENABLED, PLUGINS}
 import org.apache.spark.resource._
 import org.apache.spark.resource.ResourceUtils._
 import org.apache.spark.resource.TestResourceIDs._
@@ -586,7 +586,44 @@ class CoarseGrainedExecutorBackendSuite extends SparkFunSuite
     }
     try {
       sc.addSparkListener(listener)
-      eventually(timeout(15.seconds)) {
+      eventually(timeout(30.seconds)) {
+        assert(executorAddCounter.get() >= 2)
+        assert(executorRemovedCounter.get() >= 2)
+      }
+    } finally {
+      sc.removeSparkListener(listener)
+    }
+  }
+
+  /**
+   * Test the case where FHE Helper is enabled.
+   */
+  test("FHE Helper enabled") {
+    val conf = new SparkConf()
+      .setMaster("local-cluster[1, 1, 2048]")
+      .set(PLUGINS, Seq(classOf[TestFatalErrorPlugin].getName))
+      .set(FHE_ENABLED, true)
+      .setAppName("test")
+//      .set("spark.executor.extraJavaOptions",
+//        "-agentlib:jdwp=transport=dt_socket,server=n,address=localhost:5006,suspend=n")
+    sc = new SparkContext(conf)
+//    sc.setLogLevel("DEBUG")
+    val executorAddCounter = new AtomicInteger(0)
+    val executorRemovedCounter = new AtomicInteger(0)
+
+    val listener = new SparkListener() {
+      override def onExecutorAdded(executorAdded: SparkListenerExecutorAdded): Unit = {
+        executorAddCounter.getAndIncrement()
+      }
+
+      override def onExecutorRemoved(executorRemoved: SparkListenerExecutorRemoved): Unit = {
+        executorRemovedCounter.getAndIncrement()
+      }
+    }
+    try {
+      sc.addSparkListener(listener)
+      // need more time to start executors as FHE libs will be loaded
+      eventually(timeout(60.seconds)) {
         assert(executorAddCounter.get() >= 2)
         assert(executorRemovedCounter.get() >= 2)
       }

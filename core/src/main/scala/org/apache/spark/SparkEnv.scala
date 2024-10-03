@@ -103,6 +103,7 @@ class SparkEnv (
     }
     fheHelper = Some(FHEHelper.getOrCreate(
         publicKeyPath, privateKeyPath, confDir, isDriver));
+    logInfo(s"FHE Helper is created at $executorId")
   }
 
   private[spark] def stop(): Unit = {
@@ -215,7 +216,10 @@ object SparkEnv extends Logging {
       mockOutputCommitCoordinator = mockOutputCommitCoordinator
     )
     if (conf.get(FHE_ENABLED)) {
-      val publicKeyPath = conf.get(FHE_PUBLIC_KEY_DIR) +"/" + "public.key"
+      val publicKeyPath = conf.get(FHE_PUBLIC_KEY_DIR) match {
+        case Some(v) => s"$v${File.separator}public.key"
+        case None => env.driverTmpDir.get + "/public.key"
+      }
       env.initFHEHelper(SparkContext.DRIVER_IDENTIFIER, publicKeyPath)
     }
 
