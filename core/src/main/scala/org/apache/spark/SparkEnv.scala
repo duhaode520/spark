@@ -28,6 +28,7 @@ import scala.util.Properties
 
 import com.google.common.cache.CacheBuilder
 import org.ade.SpatialFHE.FHEHelper
+import org.ade.SpatialFHE.spatialfhe.HECrypto
 import org.apache.hadoop.conf.Configuration
 
 import org.apache.spark.annotation.DeveloperApi
@@ -101,8 +102,17 @@ class SparkEnv (
     } else {
       Utils.getDefaultConfDir()
     }
+    val executorCPU = conf.get("spark.executor.cores", "1").toInt
+    val heLib = if (conf.get(FHE_LIB).equals("Phantom") ) {
+      HECrypto.HELibrary.Phantom
+    } else {
+      HECrypto.HELibrary.SEAL
+    }
+
+    val fheRpcAddress = conf.get(DRIVER_HOST_ADDRESS) + ":" + conf.get(FHE_RPC_PORT)
+
     fheHelper = Some(FHEHelper.getOrCreate(
-        publicKeyPath, privateKeyPath, confDir, isDriver));
+        publicKeyPath, privateKeyPath, confDir, fheRpcAddress, heLib, isDriver, executorCPU))
     logInfo(s"FHE Helper is created at $executorId")
   }
 

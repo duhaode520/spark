@@ -1062,11 +1062,23 @@ package object config {
       .booleanConf
       .createWithDefault(false)
 
+  private[spark] val FHE_LIB =
+      ConfigBuilder("spark.fhe.lib")
+      .version("3.2.0")
+      .stringConf
+      .createWithDefault("Phantom")
+
   private[spark] val FHE_PUBLIC_KEY_DIR =
         ConfigBuilder("spark.fhe.publicKeyDir")
         .version("3.2.0")
         .stringConf
         .createOptional
+
+  private[spark] val FHE_RPC_PORT =
+        ConfigBuilder("spark.fhe.rpcPort")
+        .version("3.2.0")
+        .intConf
+        .createWithDefault(10000)
 
   private[spark] val DRIVER_HOST_ADDRESS = ConfigBuilder("spark.driver.host")
     .doc("Address of driver endpoints.")
